@@ -63,7 +63,10 @@ with mss.mss() as sct:
             cv2.destroyAllWindows()
             break
 
-        last_time = time.time()
+        # Todo: Grab monitor asynchronously then we can control
+        # fps capture rate.
+
+        # Grab is so that we can take a screenshot of just part of the screen.
         raw_img = sct.grab(monitor)
 
         # Get raw pixels from the screen and turn it into a numpy array
@@ -80,6 +83,7 @@ with mss.mss() as sct:
             img_array = tf.expand_dims(predictable_image, 0) # Create a batch
             prediction = model.predict(img_array)
             result = numpy.argmax(prediction)
+
             print(prediction)
 
             if result == 0:
@@ -92,4 +96,6 @@ with mss.mss() as sct:
                 nothing()
                 print("nothing")
 
+
+        # This causes performance issues.
         time.sleep(0.15)
