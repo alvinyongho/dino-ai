@@ -41,8 +41,6 @@ image_width = 480
 num_screenshots = 0
 monitor = {"top": 190, "left": 950, "width": image_width, "height": image_height}
 
-
-
 # Load the model
 # Why do we load them separately?
 model = keras.models.model_from_json(open("model.json", "r").read())
@@ -52,7 +50,6 @@ last_screenshots = deque(maxlen=4)
 predictable_image = None
 
 with mss.mss() as sct:
-
     while "Screen capturing":
         if is_exit == True:
             keyboard.release("right")
@@ -80,23 +77,10 @@ with mss.mss() as sct:
             predictable_image = numpy.concatenate(last_screenshots)
             im = Image.fromarray(predictable_image)
             gray = im.convert("L")
-            img_array = keras.preprocessing.image.img_to_array(gray)
-            # print(img_array.shape)
-
-            # cv2.imshow("OpenCV/Numpy normal", predictable_image)
-
-            # # # Inserts a new axis that will appear at the axis position in the expanded array shape
             img_array = tf.expand_dims(predictable_image, 0) # Create a batch
-            # print(img_array.shape)
-
-            # if img_array.shape != (1,600,480):
-            #     continue
-            
             prediction = model.predict(img_array)
-            
             result = numpy.argmax(prediction)
             print(prediction)
-            # print(result)
 
             if result == 0:
                 duck()
@@ -107,8 +91,5 @@ with mss.mss() as sct:
             elif result == 2:
                 nothing()
                 print("nothing")
-
-
-            # # # cv2.imshow("OpenCV/Numpy normal", gray)
 
         time.sleep(0.15)
