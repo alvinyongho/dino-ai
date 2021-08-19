@@ -131,7 +131,7 @@ print(class_names)
 #         plt.axis("off")
 #         plt.show()
 
-epochs = 5
+epochs = 4
 model = create_model()
 model.summary()
 history = model.fit(

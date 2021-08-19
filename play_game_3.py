@@ -8,6 +8,7 @@ import uuid
 from tensorflow import keras
 import tensorflow as tf
 from collections import deque
+from threading import Thread
 
 FPS = 14
 
@@ -50,55 +51,78 @@ model.load_weights("weights.h5")
 
 last_screenshots = deque(maxlen=FPS)
 predictable_image = None
+class ScreenCapture(Thread):
+    def __init__(self, sct):
+        Thread.__init__(self)
+        self.running = True
+        self.sct = sct
+    
+    def run(self):
+        while self.running:
+            # Press "q" to quit
+            if cv2.waitKey(25) & 0xFF == ord("q"):
+                self.running = False
+                break
+
+            # Grab is so that we can take a screenshot of just part of the screen.
+            raw_img = sct.grab(monitor)
+
+            # Get raw pixels from the screen and turn it into a numpy array
+            img_array = numpy.array(raw_img)
+            gray = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
+            last_screenshots.append(gray)
+
+            time.sleep(0.15)
+
+class GameRunner(Thread):
+    def __init__(self, sct):
+        Thread.__init__(self)
+        self.running = True
+        self.sct = sct
+
+    def run(self):
+        while self.running:
+            if is_exit == True:
+                keyboard.release("right")
+                keyboard.release(keyboard.KEY_DOWN)
+                keyboard.release(keyboard.KEY_UP)
+                cv2.destroyAllWindows()
+                break
+
+            # Press "q" to quit
+            if cv2.waitKey(25) & 0xFF == ord("q"):
+                self.running = False
+                cv2.destroyAllWindows()
+                break
+
+            if len(last_screenshots) < FPS:
+                continue
+            else:
+                predictable_image = numpy.concatenate(last_screenshots)
+                im = Image.fromarray(predictable_image)
+                gray = im.convert("L")
+                img_array = tf.expand_dims(predictable_image, 0) # Create a batch
+                prediction = model.predict(img_array)
+                result = numpy.argmax(prediction)
+
+                print(prediction)
+
+                if result == 0:
+                    duck()
+                    print("duck")
+                elif result == 1:
+                    jump()
+                    print("jump")
+                elif result == 2:
+                    nothing()
+                    print("nothing")
+
+            time.sleep(0.00001)
 
 with mss.mss() as sct:
-    while "Screen capturing":
-        if is_exit == True:
-            keyboard.release("right")
-            keyboard.release(keyboard.KEY_DOWN)
-            keyboard.release(keyboard.KEY_UP)
-            cv2.destroyAllWindows()
-            break
+    screenCapture = ScreenCapture(sct)
+    screenCapture.start()
 
-        # Press "q" to quit
-        if cv2.waitKey(25) & 0xFF == ord("q"):
-            cv2.destroyAllWindows()
-            break
+    gameRunner = GameRunner(sct)
+    gameRunner.start()
 
-        # Todo: Grab monitor asynchronously then we can control
-        # fps capture rate.
-
-        # Grab is so that we can take a screenshot of just part of the screen.
-        raw_img = sct.grab(monitor)
-
-        # Get raw pixels from the screen and turn it into a numpy array
-        img_array = numpy.array(raw_img)
-        gray = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
-        last_screenshots.append(gray)
-
-        if len(last_screenshots) < FPS:
-            continue
-        else:
-            predictable_image = numpy.concatenate(last_screenshots)
-            im = Image.fromarray(predictable_image)
-            im = im.resize((150,600), Image.NEAREST)
-            gray = im.convert("L")
-            img_array = tf.expand_dims(predictable_image, 0) # Create a batch
-            prediction = model.predict(img_array)
-            result = numpy.argmax(prediction)
-
-            print(prediction)
-
-            if result == 0:
-                duck()
-                print("duck")
-            elif result == 1:
-                jump()
-                print("jump")
-            elif result == 2:
-                nothing()
-                print("nothing")
-
-
-        # This causes performance issues.
-        time.sleep(1/FPS)

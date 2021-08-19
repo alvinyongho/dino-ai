@@ -22,10 +22,13 @@ import matplotlib.pyplot as plt
 
 image_height = 150*14
 image_width = 480
-batch_size = 26
+batch_size = 16
 num_classes = 3
 
 DATA_DIR = "./fps_images/"
+
+physical_devices = tf.config.list_physical_devices('GPU') 
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 def preprocess_images(data_dir):
     train_dataset = keras.preprocessing.image_dataset_from_directory(
@@ -60,7 +63,7 @@ def create_model():
 
     # By using model.add(...) Then we can do model.summary()
     # Last parameter of the shape tells it that it has one channel for color
-    model.add(layers.Input(shape=(image_height, image_width, 1)))
+    model.add(layers.InputLayer(input_shape=(image_height, image_width, 1)))
 
     # Standardize the data
     model.add(layers.experimental.preprocessing.Rescaling(1./255))
@@ -105,7 +108,7 @@ def create_model():
 
     # Removes some elements
     # Added to prevent overfitting
-    model.add(layers.Dropout(0.25))
+    model.add(layers.Dropout(0.4))
 
     # Implements operation output = activation(dot(input, kernel)+bias)
     # softmax is a function that turns a vector of K real values into a vector of K real values that sum to 1.
@@ -117,28 +120,15 @@ def create_model():
 
 
 train_dataset, validate_dataset = preprocess_images(DATA_DIR)
-class_names = train_dataset.class_names
-print(class_names)
 
-
-# plt.figure(figsize=(10,10))
-# for images, labels in train_dataset.take(1):
-#     for i in range(9):
-#         ax = plt.subplot(3,3, i+1)
-#         plt.imshow(images[i].numpy().astype("uint8"))
-#         print(labels[i].numpy())
-#         plt.title(f"{labels[i].numpy()}")
-#         plt.axis("off")
-#         plt.show()
-
-epochs = 5
+epochs = 7
 model = create_model()
 model.summary()
 history = model.fit(
     train_dataset,
     validation_data = validate_dataset,
     epochs = epochs,
-    batch_size=batch_size
+    batch_size=batch_size,
 )
 
 # visualize accuracy
